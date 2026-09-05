@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { createSession, verifyPassword, SESSION_COOKIE_NAME, SESSION_DURATION_DAYS } from "@/lib/auth";
+import { jsonCorsResponse, handleOptions } from "@/lib/cors";
 
 export const dynamic = "force-dynamic";
 
@@ -10,25 +11,28 @@ export async function POST(req: Request) {
     try {
       body = await req.json();
     } catch {
-      return NextResponse.json(
+      return jsonCorsResponse(
         { success: false, error: "Invalid JSON request body." },
-        { status: 400 }
+        { status: 400 },
+        req
       );
     }
 
     const { email, password } = body || {};
 
     if (!email || typeof email !== "string" || !email.includes("@")) {
-      return NextResponse.json(
+      return jsonCorsResponse(
         { success: false, error: "Please enter a valid work email." },
-        { status: 400 }
+        { status: 400 },
+        req
       );
     }
 
     if (!password || typeof password !== "string") {
-      return NextResponse.json(
+      return jsonCorsResponse(
         { success: false, error: "Password is required." },
-        { status: 400 }
+        { status: 400 },
+        req
       );
     }
 
@@ -63,23 +67,26 @@ export async function POST(req: Request) {
     });
 
     if (!user) {
-      return NextResponse.json(
+      return jsonCorsResponse(
         { success: false, error: "Invalid email or password." },
-        { status: 401 }
+        { status: 401 },
+        req
       );
     }
 
     if (!user.is_active) {
-      return NextResponse.json(
+      return jsonCorsResponse(
         { success: false, error: "Your account is inactive. Contact an administrator." },
-        { status: 403 }
+        { status: 403 },
+        req
       );
     }
 
     if (user.is_locked) {
-      return NextResponse.json(
+      return jsonCorsResponse(
         { success: false, error: "Your account is locked. Contact an administrator." },
-        { status: 403 }
+        { status: 403 },
+        req
       );
     }
 
@@ -97,15 +104,17 @@ export async function POST(req: Request) {
       });
 
       if (shouldLock) {
-        return NextResponse.json(
+        return jsonCorsResponse(
           { success: false, error: "Account locked due to too many failed attempts." },
-          { status: 403 }
+          { status: 403 },
+          req
         );
       }
 
-      return NextResponse.json(
+      return jsonCorsResponse(
         { success: false, error: "Invalid email or password." },
-        { status: 401 }
+        { status: 401 },
+        req
       );
     }
 
@@ -141,28 +150,32 @@ export async function POST(req: Request) {
       roles.some((r) => r.name === "admin" || r.name === "hr_manager") ||
       permissions.includes("system:manage:users");
 
-    const response = NextResponse.json({
-      success: true,
-      data: {
-        user: {
-          id: user.id,
-          email: user.email,
-          first_name: user.first_name,
-          last_name: user.last_name,
-          employee: user.employees
-            ? {
-                id: user.employees.id,
-                name: `${user.employees.first_name} ${user.employees.last_name}`.trim(),
-                employee_code: user.employees.employee_code,
-                work_email: user.employees.work_email,
-              }
-            : null,
+    const response = jsonCorsResponse(
+      {
+        success: true,
+        data: {
+          user: {
+            id: user.id,
+            email: user.email,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            employee: user.employees
+              ? {
+                  id: user.employees.id,
+                  name: `${user.employees.first_name} ${user.employees.last_name}`.trim(),
+                  employee_code: user.employees.employee_code,
+                  work_email: user.employees.work_email,
+                }
+              : null,
+          },
+          roles,
+          permissions,
+          isAdmin,
         },
-        roles,
-        permissions,
-        isAdmin,
       },
-    });
+      undefined,
+      req
+    );
 
     response.cookies.set({
       name: SESSION_COOKIE_NAME,
@@ -177,9 +190,16 @@ export async function POST(req: Request) {
     return response;
   } catch (error) {
     console.error("Login route error:", error);
-    return NextResponse.json(
+    return jsonCorsResponse(
       { success: false, error: "An unexpected server error occurred." },
-      { status: 500 }
+      { status: 500 },
+      req
     );
   }
 }
+
+export async function OPTIONS(req: Request) {
+  return handleOptions(req);
+}
+
+
