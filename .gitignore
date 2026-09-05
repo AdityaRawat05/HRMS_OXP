@@ -35,3 +35,7 @@ yarn-error.log*
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local authentication/test artifacts
+admin_cookies.txt
+user_cookies.txt
