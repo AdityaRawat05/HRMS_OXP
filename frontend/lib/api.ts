@@ -532,4 +532,482 @@ export function getPayslipPdfUrl(id: string | number): string {
   return `${baseUrl}/api/payslips/${id}/pdf`;
 }
 
+export interface EmployeeKanbanRecord {
+  id: number;
+  employeeCode: string;
+  employee_code?: string;
+  firstName: string;
+  first_name?: string;
+  lastName: string;
+  last_name?: string;
+  fullName: string;
+  full_name?: string;
+  initials: string;
+  workEmail: string;
+  work_email?: string;
+  phone?: string | null;
+  avatarUrl?: string | null;
+  avatar_url?: string | null;
+  employmentType: string;
+  employment_type?: string;
+  kanbanState: string;
+  kanban_state?: string;
+  isActive: boolean;
+  is_active?: boolean;
+  status: string;
+  department: string;
+  departmentId?: number | null;
+  department_id?: number | null;
+  jobPosition: string;
+  job_position?: string;
+  jobPositionId?: number | null;
+  companyName?: string | null;
+  managerName?: string | null;
+  bankName?: string | null;
+  bankAccountNo?: string | null;
+}
+
+export async function getEmployeesKanbanApi(
+  search?: string,
+  kanban_state?: string,
+  department_id?: number | null,
+  page: number = 1
+): Promise<ApiResponse<{ employees: EmployeeKanbanRecord[]; meta: { total: number; page: number; limit: number; totalPages: number } }>> {
+  const params = new URLSearchParams();
+  if (search) params.set("search", search);
+  if (kanban_state) params.set("kanban_state", kanban_state);
+  if (department_id) params.set("department_id", String(department_id));
+  params.set("page", String(page));
+  const queryString = params.toString() ? `?${params.toString()}` : "";
+
+  return apiRequest<{ employees: EmployeeKanbanRecord[]; meta: { total: number; page: number; limit: number; totalPages: number } }>(
+    `/api/employees${queryString}`,
+    { method: "GET" }
+  );
+}
+
+export interface ContractRecord {
+  id: number;
+  reference: string;
+  contract_reference?: string;
+  contract_type?: string;
+  employee_id: number;
+  employee: {
+    id: number;
+    name: string;
+    first_name?: string;
+    last_name?: string;
+    employee_code?: string;
+    work_email?: string;
+  };
+  department_id?: number | null;
+  department?: string;
+  department_detail?: { id: number; name: string; code: string } | null;
+  job_position_id?: number | null;
+  job_position?: string;
+  job_position_detail?: { id: number; title?: string; name?: string } | null;
+  date_start: string;
+  date_end?: string | null;
+  wage_type?: string;
+  wage_amount: string;
+  wage_per_month?: string;
+  currency_code?: string;
+  working_schedule_id?: number | null;
+  working_schedule?: string;
+  working_schedule_detail?: { id: number; name: string; total_weekly_hours: string } | null;
+  salary_structure_id?: number | null;
+  salary_structure?: string;
+  salary_structure_detail?: { id: number; name: string; code: string } | null;
+  state: string;
+  status: string;
+  notes?: string | null;
+  payslips_count?: number;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+export interface ContractFormOptions {
+  employees: { id: number; name: string; employee_code: string; work_email?: string | null; department_id?: number | null }[];
+  departments: { id: number; name: string; code: string }[];
+  job_positions: { id: number; title: string }[];
+  working_schedules: { id: number; name: string; total_weekly_hours: string }[];
+  salary_structures: { id: number; name: string; code: string }[];
+}
+
+export interface ContractCreatePayload {
+  employee_id: number;
+  date_start: string;
+  date_end?: string | null;
+  wage_amount: number;
+  wage_type?: string;
+  contract_type?: string;
+  department_id?: number | null;
+  job_position_id?: number | null;
+  working_schedule_id?: number | null;
+  salary_structure_id?: number | null;
+  state?: string;
+  reference?: string;
+  notes?: string;
+}
+
+export async function getContractsApi(
+  search?: string,
+  state?: string,
+  page: number = 1
+): Promise<ApiResponse<{ contracts: ContractRecord[]; meta: { total: number; page: number; limit: number; totalPages: number } }>> {
+  const params = new URLSearchParams();
+  if (search) params.set("search", search);
+  if (state && state !== "all") params.set("state", state);
+  params.set("page", String(page));
+  const queryString = params.toString() ? `?${params.toString()}` : "";
+
+  return apiRequest<{ contracts: ContractRecord[]; meta: { total: number; page: number; limit: number; totalPages: number } }>(
+    `/api/contracts${queryString}`,
+    { method: "GET" }
+  );
+}
+
+export async function getContractByIdApi(
+  id: string | number
+): Promise<ApiResponse<{ contract: ContractRecord }>> {
+  return apiRequest<{ contract: ContractRecord }>(`/api/contracts/${id}`, {
+    method: "GET",
+  });
+}
+
+export async function getContractOptionsApi(): Promise<ApiResponse<ContractFormOptions>> {
+  return apiRequest<ContractFormOptions>("/api/contracts/options", {
+    method: "GET",
+  });
+}
+
+export async function createContractApi(
+  payload: ContractCreatePayload
+): Promise<ApiResponse<{ contract: ContractRecord }>> {
+  return apiRequest<{ contract: ContractRecord }>("/api/contracts", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateContractApi(
+  id: string | number,
+  payload: Partial<ContractCreatePayload>
+): Promise<ApiResponse<{ contract: ContractRecord }>> {
+  return apiRequest<{ contract: ContractRecord }>(`/api/contracts/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteContractApi(
+  id: string | number
+): Promise<ApiResponse<{ message: string; data?: any }>> {
+  return apiRequest<{ message: string; data?: any }>(`/api/contracts/${id}`, {
+    method: "DELETE",
+  });
+}
+
+/* ==========================================================================
+   WORKING SCHEDULES API
+   ========================================================================== */
+
+export interface WorkingScheduleLine {
+  id?: number;
+  working_schedule_id?: number;
+  day_of_week: number;
+  day?: string;
+  day_name?: string;
+  start_time: string;
+  end_time: string;
+  break_duration_minutes: number;
+  break?: number;
+  is_working_day: boolean;
+  net_hours?: number;
+  hours?: number;
+}
+
+export interface WorkingScheduleRecord {
+  id: number;
+  company_id: number;
+  company_name?: string;
+  company?: { id: number; name: string };
+  name: string;
+  schedule_name?: string;
+  timezone: string;
+  total_weekly_hours: number;
+  hours_per_week?: string;
+  days_per_week?: number;
+  is_default: boolean;
+  is_active: boolean;
+  status?: string;
+  created_at?: string;
+  updated_at?: string;
+  lines?: WorkingScheduleLine[];
+  working_schedule_lines?: WorkingScheduleLine[];
+}
+
+export interface WorkingScheduleCreatePayload {
+  name: string;
+  company_id: number;
+  timezone?: string;
+  is_default?: boolean;
+  is_active?: boolean;
+  lines?: {
+    day_of_week: number;
+    day_name?: string;
+    start_time: string;
+    end_time: string;
+    break_duration_minutes?: number;
+    is_working_day?: boolean;
+  }[];
+}
+
+export interface WorkingScheduleUpdatePayload {
+  name?: string;
+  company_id?: number;
+  timezone?: string;
+  is_default?: boolean;
+  is_active?: boolean;
+}
+
+export async function getWorkingSchedulesApi(params?: {
+  search?: string;
+  status?: string;
+  company_id?: number;
+}): Promise<ApiResponse<WorkingScheduleRecord[]>> {
+  const qp = new URLSearchParams();
+  if (params?.search) qp.set("search", params.search);
+  if (params?.status) qp.set("status", params.status);
+  if (params?.company_id) qp.set("company_id", String(params.company_id));
+  const queryString = qp.toString() ? `?${qp.toString()}` : "";
+
+  return apiRequest<WorkingScheduleRecord[]>(`/api/working-schedules${queryString}`, {
+    method: "GET",
+  });
+}
+
+export async function getWorkingScheduleByIdApi(
+  id: string | number
+): Promise<ApiResponse<WorkingScheduleRecord>> {
+  return apiRequest<WorkingScheduleRecord>(`/api/working-schedules/${id}`, {
+    method: "GET",
+  });
+}
+
+export async function createWorkingScheduleApi(
+  payload: WorkingScheduleCreatePayload
+): Promise<ApiResponse<WorkingScheduleRecord>> {
+  return apiRequest<WorkingScheduleRecord>("/api/working-schedules", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateWorkingScheduleApi(
+  id: string | number,
+  payload: WorkingScheduleUpdatePayload
+): Promise<ApiResponse<WorkingScheduleRecord>> {
+  return apiRequest<WorkingScheduleRecord>(`/api/working-schedules/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteWorkingScheduleApi(
+  id: string | number
+): Promise<ApiResponse<{ message: string; deleted?: boolean; deactivated?: boolean }>> {
+  return apiRequest<{ message: string; deleted?: boolean; deactivated?: boolean }>(
+    `/api/working-schedules/${id}`,
+    {
+      method: "DELETE",
+    }
+  );
+}
+
+export async function addScheduleLineApi(
+  scheduleId: string | number,
+  linePayload: any
+): Promise<ApiResponse<{ data: WorkingScheduleLine; total_weekly_hours: number }>> {
+  return apiRequest<{ data: WorkingScheduleLine; total_weekly_hours: number }>(
+    `/api/working-schedules/${scheduleId}/lines`,
+    {
+      method: "POST",
+      body: JSON.stringify(linePayload),
+    }
+  );
+}
+
+export async function updateScheduleLineApi(
+  scheduleId: string | number,
+  lineId: string | number,
+  linePayload: any
+): Promise<ApiResponse<{ data: WorkingScheduleLine; total_weekly_hours: number }>> {
+  return apiRequest<{ data: WorkingScheduleLine; total_weekly_hours: number }>(
+    `/api/working-schedules/${scheduleId}/lines/${lineId}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(linePayload),
+    }
+  );
+}
+
+export async function deleteScheduleLineApi(
+  scheduleId: string | number,
+  lineId: string | number
+): Promise<ApiResponse<{ message: string; total_weekly_hours: number }>> {
+  return apiRequest<{ message: string; total_weekly_hours: number }>(
+    `/api/working-schedules/${scheduleId}/lines/${lineId}`,
+    {
+      method: "DELETE",
+    }
+  );
+}
+
+/* ==========================================================================
+   ATTENDANCE API
+   ========================================================================== */
+
+export interface AttendanceRecord {
+  id: string;
+  employee_id: number;
+  employee: {
+    id: number;
+    name: string;
+    first_name?: string;
+    last_name?: string;
+    employee_code?: string;
+    work_email?: string;
+    avatar_url?: string | null;
+  };
+  employee_name: string;
+  department: string;
+  department_detail?: { id: number; name: string } | null;
+  manager: string;
+  manager_detail?: { id: number; name: string } | null;
+  attendance_date: string;
+  check_in: string | null;
+  check_in_time: string;
+  check_out: string | null;
+  check_out_time: string;
+  worked_hours: number | null;
+  running_worked_hours: number;
+  running_worked_hours_display: string;
+  overtime_hours: number;
+  break_hours: number;
+  status: "present" | "absent" | "late" | "half_day" | "on_leave" | "holiday" | "missing_checkout" | string;
+  status_display: string;
+  is_late: boolean;
+  late_minutes: number;
+  is_early_leave: boolean;
+  is_manually_corrected: boolean;
+  corrected_by?: number | null;
+  correction_reason?: string | null;
+  notes?: string | null;
+  source: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AttendanceWidgetData {
+  authenticated_employee: {
+    id: number;
+    name: string;
+    employee_code: string;
+    work_email: string;
+    department: string;
+  };
+  current_status: "checked_in" | "checked_out" | "not_checked_in";
+  is_checked_in: boolean;
+  check_in: string | null;
+  check_in_time: string;
+  check_out: string | null;
+  check_out_time: string;
+  today_worked_hours: number;
+  running_worked_hours: number;
+  running_worked_hours_display: string;
+  status?: string;
+  status_display?: string;
+  today_record?: AttendanceRecord | null;
+}
+
+export async function getAttendanceListApi(params?: {
+  search?: string;
+  date?: string;
+  employeeId?: string | number;
+  status?: string;
+  page?: number;
+  limit?: number;
+}): Promise<ApiResponse<AttendanceRecord[]> & { meta?: { total: number; page: number; limit: number; totalPages: number } }> {
+  const qp = new URLSearchParams();
+  if (params?.search) qp.set("search", params.search);
+  if (params?.date) qp.set("date", params.date);
+  if (params?.employeeId) qp.set("employeeId", String(params.employeeId));
+  if (params?.status && params.status !== "all") qp.set("status", params.status);
+  if (params?.page) qp.set("page", String(params.page));
+  if (params?.limit) qp.set("limit", String(params.limit));
+
+  const queryString = qp.toString() ? `?${qp.toString()}` : "";
+  return apiRequest<AttendanceRecord[]>(`/api/attendance${queryString}`, {
+    method: "GET",
+  });
+}
+
+export async function getAttendanceByIdApi(
+  id: string | number
+): Promise<ApiResponse<AttendanceRecord>> {
+  return apiRequest<AttendanceRecord>(`/api/attendance/${id}`, {
+    method: "GET",
+  });
+}
+
+export async function createAttendanceApi(
+  payload: any
+): Promise<ApiResponse<AttendanceRecord>> {
+  return apiRequest<AttendanceRecord>("/api/attendance", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateAttendanceApi(
+  id: string | number,
+  payload: any
+): Promise<ApiResponse<AttendanceRecord>> {
+  return apiRequest<AttendanceRecord>(`/api/attendance/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteAttendanceApi(
+  id: string | number
+): Promise<ApiResponse<{ message: string }>> {
+  return apiRequest<{ message: string }>(`/api/attendance/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export async function checkInApi(): Promise<ApiResponse<AttendanceRecord>> {
+  return apiRequest<AttendanceRecord>("/api/attendance/check-in", {
+    method: "POST",
+  });
+}
+
+export async function checkOutApi(): Promise<ApiResponse<AttendanceRecord>> {
+  return apiRequest<AttendanceRecord>("/api/attendance/check-out", {
+    method: "POST",
+  });
+}
+
+export async function getAttendanceMeApi(): Promise<ApiResponse<AttendanceWidgetData>> {
+  return apiRequest<AttendanceWidgetData>("/api/attendance/me", {
+    method: "GET",
+  });
+}
+
+
+
+
+
 
