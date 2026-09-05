@@ -1,0 +1,934 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model attendance_records {
+  id                    BigInt                    @id @default(autoincrement()) @db.UnsignedBigInt
+  employee_id           Int                       @db.UnsignedInt
+  attendance_date       DateTime                  @db.Date
+  check_in              DateTime                  @db.DateTime(0)
+  check_out             DateTime?                 @db.DateTime(0)
+  worked_hours          Decimal?                  @db.Decimal(5, 2)
+  overtime_hours        Decimal                   @default(0.00) @db.Decimal(5, 2)
+  break_hours           Decimal                   @default(0.00) @db.Decimal(4, 2)
+  status                attendance_records_status @default(present)
+  is_late               Boolean                   @default(false)
+  late_minutes          Int                       @default(0) @db.UnsignedSmallInt
+  is_early_leave        Boolean                   @default(false)
+  is_manually_corrected Boolean                   @default(false)
+  corrected_by          Int?                      @db.UnsignedInt
+  correction_reason     String?                   @db.VarChar(500)
+  source                attendance_records_source @default(web)
+  created_at            DateTime                  @default(now()) @db.DateTime(0)
+  updated_at            DateTime                  @default(now()) @db.DateTime(0)
+  employees             employees                 @relation(fields: [employee_id], references: [id], map: "fk_attendance_employee")
+
+  @@unique([employee_id, attendance_date], map: "uk_attendance_employee_date")
+  @@index([attendance_date], map: "idx_attendance_date")
+  @@index([attendance_date, status], map: "idx_attendance_date_status")
+  @@index([employee_id, status, attendance_date], map: "idx_attendance_employee_status")
+  @@index([status, check_out], map: "idx_attendance_missing_checkout")
+  @@index([employee_id, attendance_date, worked_hours, overtime_hours, status], map: "idx_attendance_payroll")
+  @@index([status], map: "idx_attendance_status")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model audit_logs {
+  id          BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id     Int?     @db.UnsignedInt
+  action      String   @db.VarChar(30)
+  entity_type String   @db.VarChar(50)
+  entity_id   BigInt   @db.UnsignedBigInt
+  field_name  String?  @db.VarChar(80)
+  old_value   String?  @db.Text
+  new_value   String?  @db.Text
+  ip_address  String?  @db.VarChar(45)
+  user_agent  String?  @db.VarChar(512)
+  created_at  DateTime @default(now()) @db.DateTime(0)
+  users       users?   @relation(fields: [user_id], references: [id], map: "fk_audit_user")
+
+  @@index([action], map: "idx_audit_action")
+  @@index([entity_type, entity_id], map: "idx_audit_entity")
+  @@index([entity_type, entity_id, created_at], map: "idx_audit_entity_time")
+  @@index([created_at], map: "idx_audit_timestamp")
+  @@index([user_id], map: "idx_audit_user")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model companies {
+  id                        Int                         @id @default(autoincrement()) @db.UnsignedInt
+  name                      String                      @unique(map: "uk_companies_name") @db.VarChar(200)
+  legal_name                String?                     @db.VarChar(200)
+  tax_id                    String?                     @db.VarChar(50)
+  address                   String?                     @db.Text
+  city                      String?                     @db.VarChar(100)
+  state                     String?                     @db.VarChar(100)
+  country                   String?                     @db.VarChar(100)
+  zip_code                  String?                     @db.VarChar(20)
+  phone                     String?                     @db.VarChar(30)
+  email                     String?                     @db.VarChar(255)
+  logo_url                  String?                     @db.VarChar(500)
+  currency_code             String                      @default("INR") @db.Char(3)
+  is_active                 Boolean                     @default(true)
+  created_at                DateTime                    @default(now()) @db.DateTime(0)
+  updated_at                DateTime                    @default(now()) @db.DateTime(0)
+  dashboard_monthly_summary dashboard_monthly_summary[]
+  departments               departments[]
+  employees                 employees[]
+  holidays                  holidays[]
+  payroll_periods           payroll_periods[]
+  payruns                   payruns[]
+  salary_structures         salary_structures[]
+  system_settings           system_settings[]
+  time_off_types            time_off_types[]
+  working_schedules         working_schedules[]
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model dashboard_monthly_summary {
+  id                    Int          @id @default(autoincrement()) @db.UnsignedInt
+  company_id            Int          @db.UnsignedInt
+  department_id         Int?         @db.UnsignedInt
+  period_year           Int          @db.UnsignedSmallInt
+  period_month          Int          @db.UnsignedTinyInt
+  total_gross           Decimal      @default(0.00) @db.Decimal(18, 2)
+  total_deductions      Decimal      @default(0.00) @db.Decimal(18, 2)
+  total_net             Decimal      @default(0.00) @db.Decimal(18, 2)
+  payslip_count         Int          @default(0) @db.UnsignedInt
+  avg_net_salary        Decimal      @default(0.00) @db.Decimal(15, 2)
+  total_present_days    Decimal      @default(0.0) @db.Decimal(10, 1)
+  total_absent_days     Decimal      @default(0.0) @db.Decimal(10, 1)
+  total_leave_days      Decimal      @default(0.0) @db.Decimal(10, 1)
+  total_late_count      Int          @default(0) @db.UnsignedInt
+  attendance_health_pct Decimal      @default(0.00) @db.Decimal(5, 2)
+  approved_leave_count  Int          @default(0) @db.UnsignedInt
+  pending_leave_count   Int          @default(0) @db.UnsignedInt
+  updated_at            DateTime     @default(now()) @db.DateTime(0)
+  companies             companies    @relation(fields: [company_id], references: [id], onDelete: Cascade, map: "fk_dms_company")
+  departments           departments? @relation(fields: [department_id], references: [id], onDelete: Cascade, map: "fk_dms_department")
+
+  @@unique([company_id, department_id, period_year, period_month], map: "uk_dms_company_dept_period")
+  @@index([company_id, period_year, period_month], map: "idx_dms_company_period")
+  @@index([department_id, period_year, period_month], map: "idx_dms_department")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model departments {
+  id                                             Int                         @id @default(autoincrement()) @db.UnsignedInt
+  company_id                                     Int                         @db.UnsignedInt
+  name                                           String                      @db.VarChar(100)
+  code                                           String?                     @db.VarChar(20)
+  parent_id                                      Int?                        @db.UnsignedInt
+  manager_id                                     Int?                        @db.UnsignedInt
+  is_active                                      Boolean                     @default(true)
+  created_at                                     DateTime                    @default(now()) @db.DateTime(0)
+  updated_at                                     DateTime                    @default(now()) @db.DateTime(0)
+  dashboard_monthly_summary                      dashboard_monthly_summary[]
+  companies                                      companies                   @relation(fields: [company_id], references: [id], map: "fk_departments_company")
+  employees_departments_manager_idToemployees    employees?                  @relation("departments_manager_idToemployees", fields: [manager_id], references: [id], map: "fk_departments_manager")
+  departments                                    departments?                @relation("departmentsTodepartments", fields: [parent_id], references: [id], map: "fk_departments_parent")
+  other_departments                              departments[]               @relation("departmentsTodepartments")
+  employee_contracts                             employee_contracts[]
+  employees_employees_department_idTodepartments employees[]                 @relation("employees_department_idTodepartments")
+  job_positions                                  job_positions[]
+
+  @@unique([company_id, name], map: "uk_departments_company_name")
+  @@index([manager_id], map: "idx_departments_manager")
+  @@index([parent_id], map: "idx_departments_parent")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model employee_contracts {
+  id                  Int                              @id @default(autoincrement()) @db.UnsignedInt
+  employee_id         Int                              @db.UnsignedInt
+  reference           String                           @unique(map: "uk_contracts_reference") @db.VarChar(50)
+  contract_type       employee_contracts_contract_type @default(permanent)
+  department_id       Int?                             @db.UnsignedInt
+  job_position_id     Int?                             @db.UnsignedInt
+  job_title_id        Int?                             @db.UnsignedInt
+  date_start          DateTime                         @db.Date
+  date_end            DateTime?                        @db.Date
+  wage_type           employee_contracts_wage_type     @default(monthly)
+  wage_amount         Decimal                          @default(0.00) @db.Decimal(15, 2)
+  currency_code       String                           @default("INR") @db.Char(3)
+  working_schedule_id Int?                             @db.UnsignedInt
+  salary_structure_id Int?                             @db.UnsignedInt
+  state               employee_contracts_state         @default(draft)
+  notes               String?                          @db.Text
+  created_by          Int?                             @db.UnsignedInt
+  updated_by          Int?                             @db.UnsignedInt
+  created_at          DateTime                         @default(now()) @db.DateTime(0)
+  updated_at          DateTime                         @default(now()) @db.DateTime(0)
+  departments         departments?                     @relation(fields: [department_id], references: [id], map: "fk_contracts_department")
+  employees           employees                        @relation(fields: [employee_id], references: [id], map: "fk_contracts_employee")
+  job_positions       job_positions?                   @relation(fields: [job_position_id], references: [id], map: "fk_contracts_job_position")
+  job_titles          job_titles?                      @relation(fields: [job_title_id], references: [id], map: "fk_contracts_job_title")
+  salary_structures   salary_structures?               @relation(fields: [salary_structure_id], references: [id], map: "fk_contracts_salary_structure")
+  working_schedules   working_schedules?               @relation(fields: [working_schedule_id], references: [id], map: "fk_contracts_schedule")
+  payslips            payslips[]
+
+  @@index([job_position_id], map: "fk_contracts_job_position")
+  @@index([job_title_id], map: "fk_contracts_job_title")
+  @@index([department_id], map: "idx_contracts_department")
+  @@index([employee_id, date_start, date_end], map: "idx_contracts_employee_dates")
+  @@index([employee_id, state], map: "idx_contracts_employee_state")
+  @@index([employee_id, state, date_start, date_end, wage_amount, salary_structure_id], map: "idx_contracts_payrun_lookup")
+  @@index([salary_structure_id], map: "idx_contracts_salary_structure")
+  @@index([working_schedule_id], map: "idx_contracts_schedule")
+  @@index([state], map: "idx_contracts_state")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model employees {
+  id                                               Int                       @id @default(autoincrement()) @db.UnsignedInt
+  user_id                                          Int?                      @unique(map: "uk_employees_user") @db.UnsignedInt
+  company_id                                       Int                       @db.UnsignedInt
+  employee_code                                    String                    @db.VarChar(30)
+  first_name                                       String                    @db.VarChar(100)
+  last_name                                        String                    @db.VarChar(100)
+  gender                                           employees_gender?
+  date_of_birth                                    DateTime?                 @db.Date
+  personal_email                                   String?                   @db.VarChar(255)
+  work_email                                       String?                   @db.VarChar(255)
+  phone                                            String?                   @db.VarChar(30)
+  mobile                                           String?                   @db.VarChar(30)
+  emergency_contact_name                           String?                   @db.VarChar(200)
+  emergency_contact_phone                          String?                   @db.VarChar(30)
+  address_line_1                                   String?                   @db.VarChar(255)
+  address_line_2                                   String?                   @db.VarChar(255)
+  city                                             String?                   @db.VarChar(100)
+  state                                            String?                   @db.VarChar(100)
+  country                                          String?                   @db.VarChar(100)
+  zip_code                                         String?                   @db.VarChar(20)
+  department_id                                    Int?                      @db.UnsignedInt
+  job_position_id                                  Int?                      @db.UnsignedInt
+  job_title_id                                     Int?                      @db.UnsignedInt
+  manager_id                                       Int?                      @db.UnsignedInt
+  employment_type                                  employees_employment_type @default(full_time)
+  hire_date                                        DateTime                  @db.Date
+  termination_date                                 DateTime?                 @db.Date
+  probation_end_date                               DateTime?                 @db.Date
+  bank_name                                        String?                   @db.VarChar(150)
+  bank_account_no                                  String?                   @db.VarChar(50)
+  bank_ifsc_code                                   String?                   @db.VarChar(20)
+  bank_branch                                      String?                   @db.VarChar(150)
+  pan_number                                       String?                   @db.VarChar(20)
+  aadhaar_number                                   String?                   @db.VarChar(20)
+  uan_number                                       String?                   @db.VarChar(30)
+  esi_number                                       String?                   @db.VarChar(30)
+  avatar_url                                       String?                   @db.VarChar(500)
+  notes                                            String?                   @db.Text
+  kanban_state                                     employees_kanban_state    @default(new)
+  is_active                                        Boolean                   @default(true)
+  created_by                                       Int?                      @db.UnsignedInt
+  updated_by                                       Int?                      @db.UnsignedInt
+  created_at                                       DateTime                  @default(now()) @db.DateTime(0)
+  updated_at                                       DateTime                  @default(now()) @db.DateTime(0)
+  deleted_at                                       DateTime?                 @db.DateTime(0)
+  attendance_records                               attendance_records[]
+  departments_departments_manager_idToemployees    departments[]             @relation("departments_manager_idToemployees")
+  employee_contracts                               employee_contracts[]
+  companies                                        companies                 @relation(fields: [company_id], references: [id], map: "fk_employees_company")
+  departments_employees_department_idTodepartments departments?              @relation("employees_department_idTodepartments", fields: [department_id], references: [id], map: "fk_employees_department")
+  job_positions                                    job_positions?            @relation(fields: [job_position_id], references: [id], map: "fk_employees_job_position")
+  job_titles                                       job_titles?               @relation(fields: [job_title_id], references: [id], map: "fk_employees_job_title")
+  employees                                        employees?                @relation("employeesToemployees", fields: [manager_id], references: [id], map: "fk_employees_manager")
+  other_employees                                  employees[]               @relation("employeesToemployees")
+  users                                            users?                    @relation(fields: [user_id], references: [id], map: "fk_employees_user")
+  payrun_warnings                                  payrun_warnings[]
+  payslips                                         payslips[]
+  time_off_allocations                             time_off_allocations[]
+  time_off_requests                                time_off_requests[]
+
+  @@unique([company_id, employee_code], map: "uk_employees_code")
+  @@index([is_active, company_id], map: "idx_employees_active")
+  @@index([company_id], map: "idx_employees_company")
+  @@index([department_id], map: "idx_employees_department")
+  @@index([department_id, is_active, employment_type], map: "idx_employees_dept_active")
+  @@index([hire_date], map: "idx_employees_hire_date")
+  @@index([job_position_id], map: "idx_employees_job_position")
+  @@index([job_title_id], map: "idx_employees_job_title")
+  @@index([kanban_state], map: "idx_employees_kanban")
+  @@index([manager_id], map: "idx_employees_manager")
+  @@index([last_name, first_name], map: "idx_employees_name")
+  @@index([deleted_at], map: "idx_employees_soft_delete")
+  @@index([employment_type], map: "idx_employees_type")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model holidays {
+  id           Int       @id @default(autoincrement()) @db.UnsignedInt
+  company_id   Int       @db.UnsignedInt
+  name         String    @db.VarChar(100)
+  holiday_date DateTime  @db.Date
+  is_optional  Boolean   @default(false)
+  created_at   DateTime  @default(now()) @db.DateTime(0)
+  companies    companies @relation(fields: [company_id], references: [id], onDelete: Cascade, map: "fk_holidays_company")
+
+  @@unique([company_id, holiday_date], map: "uk_holidays_company_date")
+  @@index([holiday_date], map: "idx_holidays_date")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model job_positions {
+  id                 Int                  @id @default(autoincrement()) @db.UnsignedInt
+  department_id      Int                  @db.UnsignedInt
+  title              String               @db.VarChar(150)
+  description        String?              @db.Text
+  total_headcount    Int                  @default(1) @db.UnsignedSmallInt
+  filled_count       Int                  @default(0) @db.UnsignedSmallInt
+  is_active          Boolean              @default(true)
+  created_at         DateTime             @default(now()) @db.DateTime(0)
+  updated_at         DateTime             @default(now()) @db.DateTime(0)
+  employee_contracts employee_contracts[]
+  employees          employees[]
+  departments        departments          @relation(fields: [department_id], references: [id], map: "fk_jp_department")
+
+  @@index([department_id], map: "idx_jp_department")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model job_titles {
+  id                 Int                  @id @default(autoincrement()) @db.UnsignedInt
+  name               String               @unique(map: "uk_job_titles_name") @db.VarChar(150)
+  description        String?              @db.Text
+  is_active          Boolean              @default(true)
+  created_at         DateTime             @default(now()) @db.DateTime(0)
+  employee_contracts employee_contracts[]
+  employees          employees[]
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model notifications {
+  id          BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id     Int       @db.UnsignedInt
+  type        String    @db.VarChar(50)
+  title       String    @db.VarChar(200)
+  message     String    @db.Text
+  entity_type String?   @db.VarChar(50)
+  entity_id   BigInt?   @db.UnsignedBigInt
+  is_read     Boolean   @default(false)
+  read_at     DateTime? @db.DateTime(0)
+  created_at  DateTime  @default(now()) @db.DateTime(0)
+  users       users     @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "fk_notif_user")
+
+  @@index([type], map: "idx_notif_type")
+  @@index([user_id, is_read, created_at], map: "idx_notif_user_unread")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model payroll_periods {
+  id         Int                   @id @default(autoincrement()) @db.UnsignedInt
+  company_id Int                   @db.UnsignedInt
+  name       String                @db.VarChar(80)
+  date_from  DateTime              @db.Date
+  date_to    DateTime              @db.Date
+  state      payroll_periods_state @default(open)
+  created_at DateTime              @default(now()) @db.DateTime(0)
+  updated_at DateTime              @default(now()) @db.DateTime(0)
+  companies  companies             @relation(fields: [company_id], references: [id], map: "fk_pp_company")
+  payruns    payruns[]
+  payslips   payslips[]
+
+  @@unique([company_id, date_from, date_to], map: "uk_pp_company_dates")
+  @@index([date_from, date_to], map: "idx_pp_dates")
+  @@index([state], map: "idx_pp_state")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model payrun_warnings {
+  id           BigInt                       @id @default(autoincrement()) @db.UnsignedBigInt
+  payrun_id    Int                          @db.UnsignedInt
+  payslip_id   BigInt?                      @db.UnsignedBigInt
+  employee_id  Int?                         @db.UnsignedInt
+  warning_type payrun_warnings_warning_type
+  severity     payrun_warnings_severity     @default(warning)
+  message      String                       @db.VarChar(500)
+  is_resolved  Boolean                      @default(false)
+  resolved_by  Int?                         @db.UnsignedInt
+  resolved_at  DateTime?                    @db.DateTime(0)
+  created_at   DateTime                     @default(now()) @db.DateTime(0)
+  employees    employees?                   @relation(fields: [employee_id], references: [id], map: "fk_pw_employee")
+  payruns      payruns                      @relation(fields: [payrun_id], references: [id], onDelete: Cascade, map: "fk_pw_payrun")
+  payslips     payslips?                    @relation(fields: [payslip_id], references: [id], onDelete: Cascade, map: "fk_pw_payslip")
+
+  @@index([employee_id], map: "idx_pw_employee")
+  @@index([payrun_id], map: "idx_pw_payrun")
+  @@index([payslip_id], map: "idx_pw_payslip")
+  @@index([warning_type], map: "idx_pw_type")
+  @@index([payrun_id, is_resolved, severity], map: "idx_pw_unresolved")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model payruns {
+  id                  Int               @id @default(autoincrement()) @db.UnsignedInt
+  company_id          Int               @db.UnsignedInt
+  payroll_period_id   Int               @db.UnsignedInt
+  salary_structure_id Int               @db.UnsignedInt
+  name                String            @db.VarChar(150)
+  reference           String            @unique(map: "uk_payruns_reference") @db.VarChar(50)
+  state               payruns_state     @default(draft)
+  total_gross         Decimal           @default(0.00) @db.Decimal(18, 2)
+  total_deductions    Decimal           @default(0.00) @db.Decimal(18, 2)
+  total_net           Decimal           @default(0.00) @db.Decimal(18, 2)
+  payslip_count       Int               @default(0) @db.UnsignedInt
+  has_warnings        Boolean           @default(false)
+  warning_count       Int               @default(0) @db.UnsignedSmallInt
+  computed_at         DateTime?         @db.DateTime(0)
+  computed_by         Int?              @db.UnsignedInt
+  validated_at        DateTime?         @db.DateTime(0)
+  validated_by        Int?              @db.UnsignedInt
+  paid_at             DateTime?         @db.DateTime(0)
+  paid_by             Int?              @db.UnsignedInt
+  sent_at             DateTime?         @db.DateTime(0)
+  sent_by             Int?              @db.UnsignedInt
+  created_by          Int?              @db.UnsignedInt
+  updated_by          Int?              @db.UnsignedInt
+  created_at          DateTime          @default(now()) @db.DateTime(0)
+  updated_at          DateTime          @default(now()) @db.DateTime(0)
+  payrun_warnings     payrun_warnings[]
+  companies           companies         @relation(fields: [company_id], references: [id], map: "fk_payruns_company")
+  payroll_periods     payroll_periods   @relation(fields: [payroll_period_id], references: [id], map: "fk_payruns_period")
+  salary_structures   salary_structures @relation(fields: [salary_structure_id], references: [id], map: "fk_payruns_structure")
+  payslips            payslips[]
+
+  @@index([company_id, state], map: "idx_payruns_company_state")
+  @@index([company_id, state, payroll_period_id, total_net], map: "idx_payruns_dashboard")
+  @@index([payroll_period_id], map: "idx_payruns_period")
+  @@index([state], map: "idx_payruns_state")
+  @@index([salary_structure_id], map: "idx_payruns_structure")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model payslip_lines {
+  id                     BigInt                         @id @default(autoincrement()) @db.UnsignedBigInt
+  payslip_id             BigInt                         @db.UnsignedBigInt
+  salary_rule_id         Int                            @db.UnsignedInt
+  category_id            Int                            @db.UnsignedInt
+  name                   String                         @db.VarChar(120)
+  code                   String                         @db.VarChar(30)
+  sequence               Int                            @db.UnsignedSmallInt
+  calculation_type       payslip_lines_calculation_type
+  rate                   Decimal                        @default(0.0000) @db.Decimal(15, 4)
+  base_amount            Decimal                        @default(0.00) @db.Decimal(15, 2)
+  amount                 Decimal                        @default(0.00) @db.Decimal(15, 2)
+  is_contribution        Boolean                        @default(false)
+  appears_on_payslip     Boolean                        @default(true)
+  created_at             DateTime                       @default(now()) @db.DateTime(0)
+  salary_rule_categories salary_rule_categories         @relation(fields: [category_id], references: [id], map: "fk_psl_category")
+  payslips               payslips                       @relation(fields: [payslip_id], references: [id], onDelete: Cascade, map: "fk_psl_payslip")
+  salary_rules           salary_rules                   @relation(fields: [salary_rule_id], references: [id], map: "fk_psl_rule")
+
+  @@index([category_id], map: "idx_psl_category")
+  @@index([payslip_id], map: "idx_psl_payslip")
+  @@index([payslip_id, sequence, category_id, amount], map: "idx_psl_render")
+  @@index([salary_rule_id], map: "idx_psl_rule")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model payslips {
+  id                 BigInt             @id @default(autoincrement()) @db.UnsignedBigInt
+  payrun_id          Int                @db.UnsignedInt
+  employee_id        Int                @db.UnsignedInt
+  contract_id        Int                @db.UnsignedInt
+  payroll_period_id  Int                @db.UnsignedInt
+  reference          String             @unique(map: "uk_payslips_reference") @db.VarChar(50)
+  date_from          DateTime           @db.Date
+  date_to            DateTime           @db.Date
+  basic_salary       Decimal            @default(0.00) @db.Decimal(15, 2)
+  gross_salary       Decimal            @default(0.00) @db.Decimal(15, 2)
+  total_deductions   Decimal            @default(0.00) @db.Decimal(15, 2)
+  net_salary         Decimal            @default(0.00) @db.Decimal(15, 2)
+  total_working_days Decimal            @default(0.0) @db.Decimal(5, 1)
+  days_worked        Decimal            @default(0.0) @db.Decimal(5, 1)
+  days_absent        Decimal            @default(0.0) @db.Decimal(5, 1)
+  leave_days_taken   Decimal            @default(0.0) @db.Decimal(5, 1)
+  overtime_hours     Decimal            @default(0.00) @db.Decimal(6, 2)
+  state              payslips_state     @default(draft)
+  has_warnings       Boolean            @default(false)
+  pdf_url            String?            @db.VarChar(500)
+  pdf_generated_at   DateTime?          @db.DateTime(0)
+  email_sent         Boolean            @default(false)
+  email_sent_at      DateTime?          @db.DateTime(0)
+  email_to           String?            @db.VarChar(255)
+  created_at         DateTime           @default(now()) @db.DateTime(0)
+  updated_at         DateTime           @default(now()) @db.DateTime(0)
+  payrun_warnings    payrun_warnings[]
+  payslip_lines      payslip_lines[]
+  employee_contracts employee_contracts @relation(fields: [contract_id], references: [id], map: "fk_payslips_contract")
+  employees          employees          @relation(fields: [employee_id], references: [id], map: "fk_payslips_employee")
+  payruns            payruns            @relation(fields: [payrun_id], references: [id], map: "fk_payslips_payrun")
+  payroll_periods    payroll_periods    @relation(fields: [payroll_period_id], references: [id], map: "fk_payslips_period")
+
+  @@unique([employee_id, payroll_period_id, payrun_id], map: "uk_payslips_employee_period")
+  @@index([contract_id], map: "idx_payslips_contract")
+  @@index([payrun_id, state, net_salary], map: "idx_payslips_dashboard")
+  @@index([payrun_id, email_sent, state], map: "idx_payslips_email_pending")
+  @@index([employee_id], map: "idx_payslips_employee")
+  @@index([payrun_id], map: "idx_payslips_payrun")
+  @@index([payroll_period_id], map: "idx_payslips_period")
+  @@index([state], map: "idx_payslips_state")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model permissions {
+  id               Int                @id @default(autoincrement()) @db.UnsignedInt
+  module           String             @db.VarChar(50)
+  action           String             @db.VarChar(30)
+  resource         String             @db.VarChar(80)
+  description      String?            @db.VarChar(255)
+  created_at       DateTime           @default(now()) @db.DateTime(0)
+  role_permissions role_permissions[]
+
+  @@unique([module, action, resource], map: "uk_permissions_module_action_resource")
+  @@index([module], map: "idx_permissions_module")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model role_permissions {
+  role_id       Int         @db.UnsignedInt
+  permission_id Int         @db.UnsignedInt
+  created_at    DateTime    @default(now()) @db.DateTime(0)
+  permissions   permissions @relation(fields: [permission_id], references: [id], onDelete: Cascade, map: "fk_rp_permission")
+  roles         roles       @relation(fields: [role_id], references: [id], onDelete: Cascade, map: "fk_rp_role")
+
+  @@id([role_id, permission_id])
+  @@index([permission_id], map: "idx_rp_permission_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model roles {
+  id               Int                @id @default(autoincrement()) @db.UnsignedInt
+  name             String             @unique(map: "uk_roles_name") @db.VarChar(50)
+  display_name     String             @db.VarChar(100)
+  description      String?            @db.VarChar(255)
+  is_active        Boolean            @default(true)
+  created_at       DateTime           @default(now()) @db.DateTime(0)
+  updated_at       DateTime           @default(now()) @db.DateTime(0)
+  role_permissions role_permissions[]
+  user_roles       user_roles[]
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model salary_rule_categories {
+  id            Int             @id @default(autoincrement()) @db.UnsignedInt
+  name          String          @db.VarChar(80)
+  code          String          @unique(map: "uk_src_code") @db.VarChar(20)
+  description   String?         @db.VarChar(255)
+  sequence      Int             @default(0) @db.UnsignedSmallInt
+  is_active     Boolean         @default(true)
+  created_at    DateTime        @default(now()) @db.DateTime(0)
+  payslip_lines payslip_lines[]
+  salary_rules  salary_rules[]
+
+  @@index([sequence], map: "idx_src_sequence")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model salary_rules {
+  id                     Int                           @id @default(autoincrement()) @db.UnsignedInt
+  salary_structure_id    Int                           @db.UnsignedInt
+  category_id            Int                           @db.UnsignedInt
+  name                   String                        @db.VarChar(120)
+  code                   String                        @db.VarChar(30)
+  sequence               Int                           @default(10) @db.UnsignedSmallInt
+  calculation_type       salary_rules_calculation_type @default(fixed)
+  fixed_amount           Decimal?                      @db.Decimal(15, 2)
+  percentage             Decimal?                      @db.Decimal(8, 4)
+  percentage_based_on    String?                       @db.VarChar(30)
+  formula                String?                       @db.Text
+  appears_on_payslip     Boolean                       @default(true)
+  is_contribution        Boolean                       @default(false)
+  is_active              Boolean                       @default(true)
+  condition_python       String?                       @db.Text
+  created_by             Int?                          @db.UnsignedInt
+  created_at             DateTime                      @default(now()) @db.DateTime(0)
+  updated_at             DateTime                      @default(now()) @db.DateTime(0)
+  payslip_lines          payslip_lines[]
+  salary_rule_categories salary_rule_categories        @relation(fields: [category_id], references: [id], map: "fk_sr_category")
+  salary_structures      salary_structures             @relation(fields: [salary_structure_id], references: [id], onDelete: Cascade, map: "fk_sr_structure")
+
+  @@unique([salary_structure_id, code], map: "uk_sr_structure_code")
+  @@index([is_active], map: "idx_sr_active")
+  @@index([category_id], map: "idx_sr_category")
+  @@index([salary_structure_id, sequence], map: "idx_sr_structure_sequence")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model salary_structures {
+  id                 Int                  @id @default(autoincrement()) @db.UnsignedInt
+  company_id         Int                  @db.UnsignedInt
+  name               String               @db.VarChar(100)
+  code               String               @db.VarChar(30)
+  description        String?              @db.Text
+  is_active          Boolean              @default(true)
+  created_by         Int?                 @db.UnsignedInt
+  created_at         DateTime             @default(now()) @db.DateTime(0)
+  updated_at         DateTime             @default(now()) @db.DateTime(0)
+  employee_contracts employee_contracts[]
+  payruns            payruns[]
+  salary_rules       salary_rules[]
+  companies          companies            @relation(fields: [company_id], references: [id], map: "fk_ss_company")
+
+  @@unique([company_id, code], map: "uk_ss_company_code")
+  @@index([is_active], map: "idx_ss_active")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model system_settings {
+  id            Int                       @id @default(autoincrement()) @db.UnsignedInt
+  company_id    Int?                      @db.UnsignedInt
+  setting_key   String                    @db.VarChar(100)
+  setting_value String                    @db.Text
+  data_type     system_settings_data_type @default(string)
+  description   String?                   @db.VarChar(255)
+  updated_by    Int?                      @db.UnsignedInt
+  created_at    DateTime                  @default(now()) @db.DateTime(0)
+  updated_at    DateTime                  @default(now()) @db.DateTime(0)
+  companies     companies?                @relation(fields: [company_id], references: [id], onDelete: Cascade, map: "fk_settings_company")
+
+  @@unique([company_id, setting_key], map: "uk_settings_company_key")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model time_off_allocations {
+  id                Int                                  @id @default(autoincrement()) @db.UnsignedInt
+  employee_id       Int                                  @db.UnsignedInt
+  time_off_type_id  Int                                  @db.UnsignedInt
+  allocation_type   time_off_allocations_allocation_type @default(annual)
+  allocated_days    Decimal                              @default(0.00) @db.Decimal(6, 2)
+  used_days         Decimal                              @default(0.00) @db.Decimal(6, 2)
+  remaining_days    Decimal?                             @db.Decimal(6, 2)
+  validity_start    DateTime                             @db.Date
+  validity_end      DateTime                             @db.Date
+  state             time_off_allocations_state           @default(draft)
+  approved_by       Int?                                 @db.UnsignedInt
+  approved_at       DateTime?                            @db.DateTime(0)
+  notes             String?                              @db.VarChar(500)
+  created_by        Int?                                 @db.UnsignedInt
+  created_at        DateTime                             @default(now()) @db.DateTime(0)
+  updated_at        DateTime                             @default(now()) @db.DateTime(0)
+  users             users?                               @relation(fields: [approved_by], references: [id], map: "fk_toa_approver")
+  employees         employees                            @relation(fields: [employee_id], references: [id], map: "fk_toa_employee")
+  time_off_types    time_off_types                       @relation(fields: [time_off_type_id], references: [id], map: "fk_toa_type")
+  time_off_requests time_off_requests[]
+
+  @@index([approved_by], map: "fk_toa_approver")
+  @@index([time_off_type_id], map: "fk_toa_type")
+  @@index([employee_id, time_off_type_id, state, validity_start, validity_end, remaining_days], map: "idx_toa_balance_check")
+  @@index([employee_id, time_off_type_id], map: "idx_toa_employee_type")
+  @@index([state], map: "idx_toa_state")
+  @@index([validity_start, validity_end], map: "idx_toa_validity")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model time_off_requests {
+  id                                         Int                     @id @default(autoincrement()) @db.UnsignedInt
+  employee_id                                Int                     @db.UnsignedInt
+  time_off_type_id                           Int                     @db.UnsignedInt
+  allocation_id                              Int?                    @db.UnsignedInt
+  date_from                                  DateTime                @db.Date
+  date_to                                    DateTime                @db.Date
+  number_of_days                             Decimal                 @db.Decimal(6, 2)
+  reason                                     String?                 @db.Text
+  document_url                               String?                 @db.VarChar(500)
+  state                                      time_off_requests_state @default(draft)
+  submitted_at                               DateTime?               @db.DateTime(0)
+  approved_by                                Int?                    @db.UnsignedInt
+  approved_at                                DateTime?               @db.DateTime(0)
+  refused_by                                 Int?                    @db.UnsignedInt
+  refused_at                                 DateTime?               @db.DateTime(0)
+  refusal_reason                             String?                 @db.VarChar(500)
+  created_by                                 Int?                    @db.UnsignedInt
+  created_at                                 DateTime                @default(now()) @db.DateTime(0)
+  updated_at                                 DateTime                @default(now()) @db.DateTime(0)
+  time_off_allocations                       time_off_allocations?   @relation(fields: [allocation_id], references: [id], map: "fk_tor_allocation")
+  users_time_off_requests_approved_byTousers users?                  @relation("time_off_requests_approved_byTousers", fields: [approved_by], references: [id], map: "fk_tor_approver")
+  employees                                  employees               @relation(fields: [employee_id], references: [id], map: "fk_tor_employee")
+  users_time_off_requests_refused_byTousers  users?                  @relation("time_off_requests_refused_byTousers", fields: [refused_by], references: [id], map: "fk_tor_refuser")
+  time_off_types                             time_off_types          @relation(fields: [time_off_type_id], references: [id], map: "fk_tor_type")
+
+  @@index([approved_by], map: "fk_tor_approver")
+  @@index([refused_by], map: "fk_tor_refuser")
+  @@index([allocation_id], map: "idx_tor_allocation")
+  @@index([date_from, date_to], map: "idx_tor_dates")
+  @@index([employee_id], map: "idx_tor_employee")
+  @@index([employee_id, state, date_from, date_to], map: "idx_tor_overlap_check")
+  @@index([state, submitted_at], map: "idx_tor_pending")
+  @@index([state], map: "idx_tor_state")
+  @@index([time_off_type_id], map: "idx_tor_type")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model time_off_types {
+  id                   Int                       @id @default(autoincrement()) @db.UnsignedInt
+  company_id           Int                       @db.UnsignedInt
+  name                 String                    @db.VarChar(80)
+  code                 String                    @db.VarChar(20)
+  color                String?                   @default("#3498db") @db.VarChar(7)
+  leave_unit           time_off_types_leave_unit @default(days)
+  requires_approval    Boolean                   @default(true)
+  requires_document    Boolean                   @default(false)
+  max_consecutive_days Int?                      @db.UnsignedSmallInt
+  is_paid              Boolean                   @default(true)
+  affects_payroll      Boolean                   @default(true)
+  is_active            Boolean                   @default(true)
+  created_at           DateTime                  @default(now()) @db.DateTime(0)
+  updated_at           DateTime                  @default(now()) @db.DateTime(0)
+  time_off_allocations time_off_allocations[]
+  time_off_requests    time_off_requests[]
+  companies            companies                 @relation(fields: [company_id], references: [id], map: "fk_tot_company")
+
+  @@unique([company_id, code], map: "uk_tot_company_code")
+  @@index([is_active, company_id], map: "idx_tot_active")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model user_roles {
+  user_id     Int      @db.UnsignedInt
+  role_id     Int      @db.UnsignedInt
+  assigned_at DateTime @default(now()) @db.DateTime(0)
+  assigned_by Int?     @db.UnsignedInt
+  roles       roles    @relation(fields: [role_id], references: [id], onDelete: Cascade, map: "fk_ur_role")
+  users       users    @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "fk_ur_user")
+
+  @@id([user_id, role_id])
+  @@index([role_id], map: "idx_ur_role_id")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model user_sessions {
+  id            BigInt   @id @default(autoincrement()) @db.UnsignedBigInt
+  user_id       Int      @db.UnsignedInt
+  session_token String   @db.VarChar(512)
+  ip_address    String   @db.VarChar(45)
+  user_agent    String?  @db.VarChar(512)
+  expires_at    DateTime @db.DateTime(0)
+  created_at    DateTime @default(now()) @db.DateTime(0)
+  users         users    @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "fk_sessions_user")
+
+  @@index([expires_at], map: "idx_sessions_expires")
+  @@index([session_token(length: 64)], map: "idx_sessions_token")
+  @@index([user_id], map: "idx_sessions_user")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model users {
+  id                                                     Int                    @id @default(autoincrement()) @db.UnsignedInt
+  email                                                  String                 @unique(map: "uk_users_email") @db.VarChar(255)
+  password_hash                                          String                 @db.VarChar(255)
+  first_name                                             String                 @db.VarChar(100)
+  last_name                                              String                 @db.VarChar(100)
+  is_active                                              Boolean                @default(true)
+  is_locked                                              Boolean                @default(false)
+  failed_login_attempts                                  Int                    @default(0) @db.UnsignedTinyInt
+  last_login_at                                          DateTime?              @db.DateTime(0)
+  password_changed_at                                    DateTime?              @db.DateTime(0)
+  created_at                                             DateTime               @default(now()) @db.DateTime(0)
+  updated_at                                             DateTime               @default(now()) @db.DateTime(0)
+  audit_logs                                             audit_logs[]
+  employees                                              employees?
+  notifications                                          notifications[]
+  time_off_allocations                                   time_off_allocations[]
+  time_off_requests_time_off_requests_approved_byTousers time_off_requests[]    @relation("time_off_requests_approved_byTousers")
+  time_off_requests_time_off_requests_refused_byTousers  time_off_requests[]    @relation("time_off_requests_refused_byTousers")
+  user_roles                                             user_roles[]
+  user_sessions                                          user_sessions[]
+
+  @@index([is_active], map: "idx_users_active")
+  @@index([last_name, first_name], map: "idx_users_name")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model working_schedule_lines {
+  id                     Int               @id @default(autoincrement()) @db.UnsignedInt
+  working_schedule_id    Int               @db.UnsignedInt
+  day_of_week            Int               @db.UnsignedTinyInt
+  day_name               String            @db.VarChar(15)
+  start_time             DateTime          @db.Time(0)
+  end_time               DateTime          @db.Time(0)
+  break_duration_minutes Int               @default(60) @db.UnsignedSmallInt
+  is_working_day         Boolean           @default(true)
+  net_hours              Decimal?          @db.Decimal(4, 2)
+  working_schedules      working_schedules @relation(fields: [working_schedule_id], references: [id], onDelete: Cascade, map: "fk_wsl_schedule")
+
+  @@unique([working_schedule_id, day_of_week], map: "uk_wsl_schedule_day")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model working_schedules {
+  id                     Int                      @id @default(autoincrement()) @db.UnsignedInt
+  company_id             Int                      @db.UnsignedInt
+  name                   String                   @db.VarChar(100)
+  timezone               String                   @default("Asia/Kolkata") @db.VarChar(50)
+  total_weekly_hours     Decimal                  @default(0.00) @db.Decimal(5, 2)
+  is_default             Boolean                  @default(false)
+  is_active              Boolean                  @default(true)
+  created_at             DateTime                 @default(now()) @db.DateTime(0)
+  updated_at             DateTime                 @default(now()) @db.DateTime(0)
+  employee_contracts     employee_contracts[]
+  working_schedule_lines working_schedule_lines[]
+  companies              companies                @relation(fields: [company_id], references: [id], map: "fk_ws_company")
+
+  @@unique([company_id, name], map: "uk_ws_company_name")
+  @@index([is_active], map: "idx_ws_active")
+}
+
+enum employee_contracts_contract_type {
+  permanent
+  fixed_term
+  probation
+  freelance
+  internship
+}
+
+enum time_off_allocations_allocation_type {
+  annual
+  accrual
+  manual
+  carry_forward
+}
+
+enum payrun_warnings_warning_type {
+  duplicate_payslip
+  missing_bank_account
+  contract_conflict
+  missing_attendance
+  expired_contract
+  no_active_contract
+  missing_checkout
+  zero_salary
+  other
+}
+
+enum system_settings_data_type {
+  string
+  integer
+  boolean
+  json
+  decimal
+}
+
+enum payroll_periods_state {
+  open
+  closed
+  locked
+}
+
+enum payrun_warnings_severity {
+  info
+  warning
+  error
+}
+
+enum time_off_types_leave_unit {
+  days
+  hours
+}
+
+enum employees_gender {
+  male
+  female
+  other
+  prefer_not_to_say
+}
+
+enum payruns_state {
+  draft
+  computed
+  validated
+  paid
+  sent
+  cancelled
+}
+
+enum salary_rules_calculation_type {
+  fixed
+  percentage
+  formula
+}
+
+enum payslip_lines_calculation_type {
+  fixed
+  percentage
+  formula
+}
+
+enum attendance_records_status {
+  present
+  absent
+  late
+  half_day
+  on_leave
+  holiday
+  missing_checkout
+}
+
+enum employee_contracts_wage_type {
+  monthly
+  hourly
+  daily
+  annual
+}
+
+enum time_off_allocations_state {
+  draft
+  approved
+  refused
+  cancelled
+}
+
+enum time_off_requests_state {
+  draft
+  submitted
+  approved
+  refused
+  cancelled
+}
+
+enum employee_contracts_state {
+  draft
+  active
+  expired
+  cancelled
+}
+
+enum attendance_records_source {
+  system
+  manual
+  biometric
+  mobile
+  web
+}
+
+enum payslips_state {
+  draft
+  computed
+  validated
+  paid
+  sent
+  cancelled
+}
+
+enum employees_employment_type {
+  full_time
+  part_time
+  contract
+  intern
+  freelance
+}
+
+enum employees_kanban_state {
+  new
+  onboarding
+  active
+  on_leave
+  offboarding
+  archived
+}
