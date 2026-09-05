@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, hashPassword } from "@/lib/auth";
+import { jsonCorsResponse, handleOptions } from "@/lib/cors";
 
 export const dynamic = "force-dynamic";
 
@@ -11,9 +12,10 @@ export async function GET(
   try {
     const id = Number(params.id);
     if (isNaN(id)) {
-      return NextResponse.json(
+      return jsonCorsResponse(
         { success: false, error: "Invalid user ID." },
-        { status: 400 }
+        { status: 400 },
+        req
       );
     }
 
@@ -27,6 +29,10 @@ export async function GET(
             first_name: true,
             last_name: true,
             work_email: true,
+            bank_name: true,
+            bank_account_no: true,
+            bank_ifsc_code: true,
+            bank_branch: true,
           },
         },
         user_roles: {
@@ -44,13 +50,14 @@ export async function GET(
     });
 
     if (!user) {
-      return NextResponse.json(
+      return jsonCorsResponse(
         { success: false, error: "User not found." },
-        { status: 404 }
+        { status: 404 },
+        req
       );
     }
 
-    return NextResponse.json({
+    return jsonCorsResponse({
       success: true,
       data: {
         user: {
@@ -64,12 +71,13 @@ export async function GET(
           roles: user.user_roles.map((ur) => ur.roles),
         },
       },
-    });
+    }, undefined, req);
   } catch (error) {
     console.error("Get user error:", error);
-    return NextResponse.json(
+    return jsonCorsResponse(
       { success: false, error: "Failed to fetch user." },
-      { status: 500 }
+      { status: 500 },
+      req
     );
   }
 }
@@ -86,9 +94,10 @@ export async function PATCH(
 
     const id = Number(params.id);
     if (isNaN(id)) {
-      return NextResponse.json(
+      return jsonCorsResponse(
         { success: false, error: "Invalid user ID." },
-        { status: 400 }
+        { status: 400 },
+        req
       );
     }
 
@@ -96,9 +105,10 @@ export async function PATCH(
     try {
       body = await req.json();
     } catch {
-      return NextResponse.json(
+      return jsonCorsResponse(
         { success: false, error: "Invalid JSON request body." },
-        { status: 400 }
+        { status: 400 },
+        req
       );
     }
 
@@ -110,9 +120,10 @@ export async function PATCH(
     });
 
     if (!user) {
-      return NextResponse.json(
+      return jsonCorsResponse(
         { success: false, error: "User not found." },
-        { status: 404 }
+        { status: 404 },
+        req
       );
     }
 
@@ -124,9 +135,10 @@ export async function PATCH(
           where: { email: normalizedEmail },
         });
         if (existing && existing.id !== id) {
-          return NextResponse.json(
+          return jsonCorsResponse(
             { success: false, error: "Email already in use by another user." },
-            { status: 409 }
+            { status: 409 },
+            req
           );
         }
         updateData.email = normalizedEmail;
@@ -143,7 +155,6 @@ export async function PATCH(
     }
 
     await prisma.$transaction(async (tx) => {
-      // Update user scalar fields
       if (Object.keys(updateData).length > 0) {
         await tx.users.update({
           where: { id },
@@ -151,7 +162,6 @@ export async function PATCH(
         });
       }
 
-      // Update roles if array provided
       if (Array.isArray(role_ids)) {
         await tx.user_roles.deleteMany({
           where: { user_id: id },
@@ -168,20 +178,17 @@ export async function PATCH(
         }
       }
 
-      // Update employee linking if provided
       if (employee_id !== undefined) {
         const newEmpId = employee_id ? Number(employee_id) : null;
         const currentEmpId = user.employees?.id || null;
 
         if (newEmpId !== currentEmpId) {
-          // Unlink previous employee if any
           if (currentEmpId) {
             await tx.employees.update({
               where: { id: currentEmpId },
               data: { user_id: null },
             });
           }
-          // Link new employee if provided
           if (newEmpId) {
             await tx.employees.update({
               where: { id: newEmpId },
@@ -192,15 +199,20 @@ export async function PATCH(
       }
     });
 
-    return NextResponse.json({
+    return jsonCorsResponse({
       success: true,
       data: { message: "User updated successfully." },
-    });
+    }, undefined, req);
   } catch (error) {
     console.error("Update user error:", error);
-    return NextResponse.json(
+    return jsonCorsResponse(
       { success: false, error: "Failed to update user." },
-      { status: 500 }
+      { status: 500 },
+      req
     );
   }
+}
+
+export async function OPTIONS(req: Request) {
+  return handleOptions(req);
 }

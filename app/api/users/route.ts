@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin, hashPassword } from "@/lib/auth";
+import { jsonCorsResponse, handleOptions } from "@/lib/cors";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +57,10 @@ export async function GET(req: Request) {
             first_name: true,
             last_name: true,
             work_email: true,
+            bank_name: true,
+            bank_account_no: true,
+            bank_ifsc_code: true,
+            bank_branch: true,
           },
         },
         user_roles: {
@@ -81,6 +86,10 @@ export async function GET(req: Request) {
             name: `${u.employees.first_name} ${u.employees.last_name}`.trim(),
             employee_code: u.employees.employee_code,
             work_email: u.employees.work_email,
+            bank_name: u.employees.bank_name || null,
+            bank_account_no: u.employees.bank_account_no || null,
+            bank_ifsc_code: u.employees.bank_ifsc_code || null,
+            bank_branch: u.employees.bank_branch || null,
           }
         : null;
 
@@ -98,15 +107,16 @@ export async function GET(req: Request) {
       };
     });
 
-    return NextResponse.json({
+    return jsonCorsResponse({
       success: true,
       data: { users: formattedUsers },
-    });
+    }, undefined, req);
   } catch (error) {
     console.error("Users list error:", error);
-    return NextResponse.json(
+    return jsonCorsResponse(
       { success: false, error: "Failed to fetch users." },
-      { status: 500 }
+      { status: 500 },
+      req
     );
   }
 }
@@ -122,18 +132,20 @@ export async function POST(req: Request) {
     try {
       body = await req.json();
     } catch {
-      return NextResponse.json(
+      return jsonCorsResponse(
         { success: false, error: "Invalid JSON request body." },
-        { status: 400 }
+        { status: 400 },
+        req
       );
     }
 
     const { email, password, first_name, last_name, employee_id, role_ids, is_active } = body || {};
 
     if (!email || typeof email !== "string" || !email.includes("@")) {
-      return NextResponse.json(
+      return jsonCorsResponse(
         { success: false, error: "A valid work email is required." },
-        { status: 400 }
+        { status: 400 },
+        req
       );
     }
 
@@ -144,16 +156,16 @@ export async function POST(req: Request) {
       where: { email: normalizedEmail },
     });
     if (existing) {
-      return NextResponse.json(
+      return jsonCorsResponse(
         { success: false, error: "A user with this email address already exists." },
-        { status: 409 }
+        { status: 409 },
+        req
       );
     }
 
     let resolvedFirstName = (first_name || "").trim();
     let resolvedLastName = (last_name || "").trim();
 
-    // If employee provided, verify and borrow name if empty
     if (employee_id) {
       const emp = await prisma.employees.findUnique({
         where: { id: Number(employee_id) },
@@ -173,7 +185,6 @@ export async function POST(req: Request) {
       : "Welcome@123";
     const passwordHash = await hashPassword(rawPassword);
 
-    // Execute in transaction
     const newUser = await prisma.$transaction(async (tx) => {
       const createdUser = await tx.users.create({
         data: {
@@ -203,7 +214,6 @@ export async function POST(req: Request) {
           });
         }
       } else {
-        // Default to Employee role (id: 5)
         await tx.user_roles.create({
           data: {
             user_id: createdUser.id,
@@ -216,7 +226,7 @@ export async function POST(req: Request) {
       return createdUser;
     });
 
-    return NextResponse.json({
+    return jsonCorsResponse({
       success: true,
       data: {
         user: {
@@ -226,12 +236,17 @@ export async function POST(req: Request) {
           last_name: newUser.last_name,
         },
       },
-    });
+    }, undefined, req);
   } catch (error) {
     console.error("Create user error:", error);
-    return NextResponse.json(
+    return jsonCorsResponse(
       { success: false, error: "Failed to create user." },
-      { status: 500 }
+      { status: 500 },
+      req
     );
   }
+}
+
+export async function OPTIONS(req: Request) {
+  return handleOptions(req);
 }
