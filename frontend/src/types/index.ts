@@ -3,13 +3,17 @@ export interface User {
   email: string;
   firstName: string;
   lastName: string;
-  role: string;
+  roles: string[];
 }
 
-export interface MetricCardProps {
-  title: string;
-  value: string | number;
-  subtitle?: string;
-  trend?: string;
-  iconName: string;
+export interface AuthResponseData {
+  user: User;
+  token: string;
+}
+
+export interface ApiResponse<T = any> {
+  success: boolean;
+  message: string;
+  data?: T;
+  errors?: Array<{ field?: string; message: string }>;
 }

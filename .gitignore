@@ -26,6 +26,12 @@ yarn-debug.log*
 yarn-error.log*
 logs/
 
+# SQLite Database
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
 # IDE / System
 .vscode/
 .idea/

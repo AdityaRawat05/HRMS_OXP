@@ -5,3 +5,9 @@ dist/
 !.env.example
 coverage/
 *.log
+
+# SQLite Database
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
