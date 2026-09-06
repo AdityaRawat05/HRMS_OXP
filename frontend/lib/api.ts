@@ -1006,8 +1006,238 @@ export async function getAttendanceMeApi(): Promise<ApiResponse<AttendanceWidget
   });
 }
 
+/* ==========================================================================
+   TIME OFF API
+   ========================================================================== */
 
+export interface TimeOffTypeRecord {
+  id: number;
+  name: string;
+  code: string;
+  description?: string;
+  requires_approval: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
 
+export interface TimeOffAllocationRecord {
+  id: number;
+  employee_id: number;
+  time_off_type_id: number;
+  description?: string;
+  allocated_days: number;
+  used_days: number;
+  remaining_days?: number;
+  valid_from?: string;
+  valid_until?: string;
+  state: "draft" | "approved" | "refused";
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+  employee?: {
+    id: number;
+    name: string;
+    employee_code?: string;
+  };
+  time_off_type?: {
+    id: number;
+    name: string;
+    code: string;
+  };
+}
 
+export interface TimeOffRequestRecord {
+  id: number;
+  employee_id: number;
+  time_off_type_id: number;
+  date_from: string;
+  date_to: string;
+  days_requested: number;
+  description?: string;
+  state: "draft" | "approved" | "refused";
+  manager_id?: number;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+  employee?: {
+    id: number;
+    name: string;
+    employee_code?: string;
+  };
+  time_off_type?: {
+    id: number;
+    name: string;
+    code: string;
+  };
+  manager?: {
+    id: number;
+    name: string;
+  };
+}
 
+// -- Time Off Types --
 
+export async function getTimeOffTypesApi(params?: {
+  search?: string;
+  status?: string;
+  page?: number;
+  limit?: number;
+}): Promise<ApiResponse<TimeOffTypeRecord[]> & { meta?: { total: number; page: number; limit: number; totalPages: number } }> {
+  const qp = new URLSearchParams();
+  if (params?.search) qp.set("search", params.search);
+  if (params?.status && params.status !== "all") qp.set("status", params.status);
+  if (params?.page) qp.set("page", String(params.page));
+  if (params?.limit) qp.set("limit", String(params.limit));
+
+  const queryString = qp.toString() ? `?${qp.toString()}` : "";
+  return apiRequest<TimeOffTypeRecord[]>(`/api/time-off/types${queryString}`, {
+    method: "GET",
+  });
+}
+
+export async function getTimeOffTypeByIdApi(id: string | number): Promise<ApiResponse<TimeOffTypeRecord>> {
+  return apiRequest<TimeOffTypeRecord>(`/api/time-off/types/${id}`, {
+    method: "GET",
+  });
+}
+
+export async function createTimeOffTypeApi(payload: any): Promise<ApiResponse<TimeOffTypeRecord>> {
+  return apiRequest<TimeOffTypeRecord>("/api/time-off/types", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateTimeOffTypeApi(id: string | number, payload: any): Promise<ApiResponse<TimeOffTypeRecord>> {
+  return apiRequest<TimeOffTypeRecord>(`/api/time-off/types/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteTimeOffTypeApi(id: string | number): Promise<ApiResponse<{ message: string }>> {
+  return apiRequest<{ message: string }>(`/api/time-off/types/${id}`, {
+    method: "DELETE",
+  });
+}
+
+// -- Time Off Allocations --
+
+export async function getTimeOffAllocationsApi(params?: {
+  search?: string;
+  employeeId?: string | number;
+  typeId?: string | number;
+  state?: string;
+  page?: number;
+  limit?: number;
+}): Promise<ApiResponse<TimeOffAllocationRecord[]> & { meta?: { total: number; page: number; limit: number; totalPages: number } }> {
+  const qp = new URLSearchParams();
+  if (params?.search) qp.set("search", params.search);
+  if (params?.employeeId) qp.set("employeeId", String(params.employeeId));
+  if (params?.typeId) qp.set("typeId", String(params.typeId));
+  if (params?.state && params.state !== "all") qp.set("state", params.state);
+  if (params?.page) qp.set("page", String(params.page));
+  if (params?.limit) qp.set("limit", String(params.limit));
+
+  const queryString = qp.toString() ? `?${qp.toString()}` : "";
+  return apiRequest<TimeOffAllocationRecord[]>(`/api/time-off/allocations${queryString}`, {
+    method: "GET",
+  });
+}
+
+export async function getTimeOffAllocationByIdApi(id: string | number): Promise<ApiResponse<TimeOffAllocationRecord>> {
+  return apiRequest<TimeOffAllocationRecord>(`/api/time-off/allocations/${id}`, {
+    method: "GET",
+  });
+}
+
+export async function createTimeOffAllocationApi(payload: any): Promise<ApiResponse<TimeOffAllocationRecord>> {
+  return apiRequest<TimeOffAllocationRecord>("/api/time-off/allocations", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateTimeOffAllocationApi(id: string | number, payload: any): Promise<ApiResponse<TimeOffAllocationRecord>> {
+  return apiRequest<TimeOffAllocationRecord>(`/api/time-off/allocations/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteTimeOffAllocationApi(id: string | number): Promise<ApiResponse<{ message: string }>> {
+  return apiRequest<{ message: string }>(`/api/time-off/allocations/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export async function approveTimeOffAllocationApi(id: string | number): Promise<ApiResponse<TimeOffAllocationRecord>> {
+  return apiRequest<TimeOffAllocationRecord>(`/api/time-off/allocations/${id}/approve`, {
+    method: "POST",
+  });
+}
+
+// -- Time Off Requests --
+
+export async function getTimeOffRequestsApi(params?: {
+  search?: string;
+  employeeId?: string | number;
+  typeId?: string | number;
+  state?: string;
+  myTeam?: boolean;
+  page?: number;
+  limit?: number;
+}): Promise<ApiResponse<TimeOffRequestRecord[]> & { meta?: { total: number; page: number; limit: number; totalPages: number } }> {
+  const qp = new URLSearchParams();
+  if (params?.search) qp.set("search", params.search);
+  if (params?.employeeId) qp.set("employeeId", String(params.employeeId));
+  if (params?.typeId) qp.set("typeId", String(params.typeId));
+  if (params?.state && params.state !== "all") qp.set("state", params.state);
+  if (params?.myTeam) qp.set("myTeam", "true");
+  if (params?.page) qp.set("page", String(params.page));
+  if (params?.limit) qp.set("limit", String(params.limit));
+
+  const queryString = qp.toString() ? `?${qp.toString()}` : "";
+  return apiRequest<TimeOffRequestRecord[]>(`/api/time-off/requests${queryString}`, {
+    method: "GET",
+  });
+}
+
+export async function getTimeOffRequestByIdApi(id: string | number): Promise<ApiResponse<TimeOffRequestRecord>> {
+  return apiRequest<TimeOffRequestRecord>(`/api/time-off/requests/${id}`, {
+    method: "GET",
+  });
+}
+
+export async function createTimeOffRequestApi(payload: any): Promise<ApiResponse<TimeOffRequestRecord>> {
+  return apiRequest<TimeOffRequestRecord>("/api/time-off/requests", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateTimeOffRequestApi(id: string | number, payload: any): Promise<ApiResponse<TimeOffRequestRecord>> {
+  return apiRequest<TimeOffRequestRecord>(`/api/time-off/requests/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteTimeOffRequestApi(id: string | number): Promise<ApiResponse<{ message: string }>> {
+  return apiRequest<{ message: string }>(`/api/time-off/requests/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export async function approveTimeOffRequestApi(id: string | number): Promise<ApiResponse<TimeOffRequestRecord>> {
+  return apiRequest<TimeOffRequestRecord>(`/api/time-off/requests/${id}/approve`, {
+    method: "POST",
+  });
+}
+
+export async function refuseTimeOffRequestApi(id: string | number): Promise<ApiResponse<TimeOffRequestRecord>> {
+  return apiRequest<TimeOffRequestRecord>(`/api/time-off/requests/${id}/refuse`, {
+    method: "POST",
+  });
+}

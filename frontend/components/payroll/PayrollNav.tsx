@@ -12,6 +12,7 @@ export default function PayrollNav() {
   const isEmployees = pathname?.startsWith("/employees") && !isContracts && !isSchedules;
   const isAttendance = pathname?.startsWith("/attendance");
   const isPayroll = pathname?.startsWith("/payroll");
+  const isTimeOff = pathname?.startsWith("/time-off");
   const isUsers = pathname?.startsWith("/users");
 
   const navItems = [
@@ -20,7 +21,7 @@ export default function PayrollNav() {
     { label: "Contracts", href: "/employees/contracts", active: isContracts },
     { label: "Working Schedules", href: "/employees/working-schedules", active: isSchedules },
     { label: "Attendance", href: "/attendance", active: isAttendance },
-    { label: "Time Off", href: "/users", active: false },
+    { label: "Time Off", href: "/time-off/requests", active: isTimeOff },
     { label: "Payroll", href: "/payroll/payruns", active: isPayroll },
   ];
 
@@ -110,6 +111,39 @@ export default function PayrollNav() {
                 }`}
               >
                 Attendance Records
+              </Link>
+            </>
+          ) : isTimeOff ? (
+            <>
+              <Link
+                href="/time-off/requests"
+                className={`h-full flex items-center font-semibold border-b-2 transition-colors ${
+                  pathname?.startsWith("/time-off/requests")
+                    ? "border-[#4F8CFF] text-[#4F8CFF]"
+                    : "border-transparent text-[#A7B3C6] hover:text-[#F8FAFC]"
+                }`}
+              >
+                Requests
+              </Link>
+              <Link
+                href="/time-off/allocations"
+                className={`h-full flex items-center font-semibold border-b-2 transition-colors ${
+                  pathname?.startsWith("/time-off/allocations")
+                    ? "border-[#4F8CFF] text-[#4F8CFF]"
+                    : "border-transparent text-[#A7B3C6] hover:text-[#F8FAFC]"
+                }`}
+              >
+                Allocations
+              </Link>
+              <Link
+                href="/time-off/types"
+                className={`h-full flex items-center font-semibold border-b-2 transition-colors ${
+                  pathname?.startsWith("/time-off/types")
+                    ? "border-[#4F8CFF] text-[#4F8CFF]"
+                    : "border-transparent text-[#A7B3C6] hover:text-[#F8FAFC]"
+                }`}
+              >
+                Types
               </Link>
             </>
           ) : (
