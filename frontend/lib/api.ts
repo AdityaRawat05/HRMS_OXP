@@ -1241,3 +1241,115 @@ export async function refuseTimeOffRequestApi(id: string | number): Promise<ApiR
     method: "POST",
   });
 }
+
+// ==========================================
+// PAYROLL DASHBOARD API
+// ==========================================
+
+export interface PayrollDashboardData {
+  filters: {
+    periodOptions: { id: number; name: string; dateFrom: string; dateTo: string; state: string }[];
+    departmentOptions: { id: number | string; name: string; code?: string }[];
+    employeeTypeOptions: { id: string; name: string }[];
+    companyOptions: { id: number; name: string; currency?: string }[];
+    activeFilters: {
+      periodId: number | null;
+      periodName: string;
+      departmentId: number | string;
+      employeeType: string;
+      companyId: number | null;
+    };
+  };
+  kpis: {
+    totalNetSalaryPaid: number;
+    formattedNetSalaryPaid: string;
+    payslipsGenerated: {
+      total: number;
+      paid: number;
+      pending: number;
+    };
+    averageSalary: number;
+    formattedAverageSalary: string;
+    employeeCountForAverage: number;
+    approvedTimeOffDays: number;
+    pendingTimeOffCount: number;
+    attendanceHealth: {
+      percentage: number;
+      presentRecords: number;
+      lateRecords: number;
+      absentRecords: number;
+      overtimeHours: number;
+      missingCheckouts: number;
+      manualCorrections: number;
+      totalRecords: number;
+    };
+  };
+  salaryByDepartment: {
+    departmentId: number;
+    departmentName: string;
+    salaryCost: number;
+    employeeCount: number;
+  }[];
+  monthlyNetSalaryTrend: {
+    month: string;
+    netSalary: number;
+    payrollPeriodId: number;
+  }[];
+  payslipStatus: {
+    total: number;
+    paid: number;
+    pending: number;
+    draft: number;
+    computed: number;
+    validated: number;
+    cancelled: number;
+    withWarnings: number;
+  };
+  payrollAlerts: {
+    id: string;
+    type: string;
+    severity: "warning" | "error" | "info";
+    message: string;
+    source: string;
+  }[];
+  attendanceOverview: {
+    presentCount: number;
+    lateCount: number;
+    absentCount: number;
+    overtimeCount: number;
+    missingCheckouts: number;
+    attendancePercentage: number;
+  };
+  timeOffOverview: {
+    typeId: number;
+    type: string;
+    leaveUnit: string;
+    approvedDays: number;
+    pendingCount: number;
+    remainingBalance: number;
+  }[];
+  departmentOverview: {
+    departmentId: number;
+    departmentName: string;
+    headcount: number;
+    monthlySalary: number;
+  }[];
+}
+
+export async function getPayrollDashboardApi(params?: {
+  period?: string | number;
+  departmentId?: string | number;
+  employeeType?: string;
+  companyId?: string | number;
+}): Promise<ApiResponse<PayrollDashboardData>> {
+  const qp = new URLSearchParams();
+  if (params?.period) qp.set("period", String(params.period));
+  if (params?.departmentId && params.departmentId !== "all") qp.set("departmentId", String(params.departmentId));
+  if (params?.employeeType && params.employeeType !== "all") qp.set("employeeType", params.employeeType);
+  if (params?.companyId) qp.set("companyId", String(params.companyId));
+
+  const queryString = qp.toString() ? `?${qp.toString()}` : "";
+  return apiRequest<PayrollDashboardData>(`/api/payroll/dashboard${queryString}`, {
+    method: "GET",
+  });
+}

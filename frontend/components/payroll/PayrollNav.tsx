@@ -80,6 +80,16 @@ export default function PayrollNav() {
           {isPayroll ? (
             <>
               <Link
+                href="/payroll/dashboard"
+                className={`h-full flex items-center font-semibold border-b-2 transition-colors ${
+                  pathname === "/payroll/dashboard"
+                    ? "border-[#4F8CFF] text-[#4F8CFF]"
+                    : "border-transparent text-[#A7B3C6] hover:text-[#F8FAFC]"
+                }`}
+              >
+                Dashboard
+              </Link>
+              <Link
                 href="/payroll/payruns"
                 className={`h-full flex items-center font-semibold border-b-2 transition-colors ${
                   pathname?.startsWith("/payroll/payruns")
