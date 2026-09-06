@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import PayrollNav from "../PayrollNav";
 import PayrollDashboardFilters from "./PayrollDashboardFilters";
 import PayrollKpiCards from "./PayrollKpiCards";
 import SalaryByDepartmentChart from "./SalaryByDepartmentChart";
@@ -145,7 +144,6 @@ export default function PayrollDashboard() {
   if (permissionError) {
     return (
       <main className="min-h-screen bg-[#0B1220] text-[#F8FAFC]">
-        <PayrollNav />
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-12 text-center">
           <div className="w-12 h-12 rounded-full bg-[#EF4444]/10 text-[#EF4444] flex items-center justify-center mx-auto mb-3">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -161,9 +159,6 @@ export default function PayrollDashboard() {
 
   return (
     <main className="min-h-screen bg-[#0B1220] text-[#F8FAFC] pb-12">
-      {/* Top Header Navigation */}
-      <PayrollNav />
-
       <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6 space-y-6">
         {/* Page Title & Subtitle */}
         <div className="pb-3 border-b border-[#263449]/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2">

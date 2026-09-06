@@ -22,12 +22,12 @@ export default function SalaryByDepartmentChart({ data }: SalaryByDepartmentChar
               Source: Payslips + Employee + Department
             </p>
           </div>
-          <span className="text-[11px] font-semibold text-[#4F8CFF] bg-[#4F8CFF]/15 px-2 py-0.5 rounded-[4px]">
-            {data.length} Departments
+          <span className="text-[11px] font-semibold text-[#4F8CFF] bg-[#4F8CFF]/15 px-2 py-0.5 rounded-[4px] border border-[#4F8CFF]/30">
+            Bar Graph
           </span>
         </div>
 
-        {/* Bar Visualizer List */}
+        {/* Visual Bar Graph */}
         {data.length === 0 ? (
           <div className="py-8 text-center text-[#A7B3C6] text-[13px]">
             No department salary data available.
@@ -53,9 +53,9 @@ export default function SalaryByDepartmentChart({ data }: SalaryByDepartmentChar
                       </span>
                     </div>
                   </div>
-                  <div className="w-full bg-[#172033] h-2.5 rounded-full overflow-hidden">
+                  <div className="w-full bg-[#172033] h-3 rounded-full overflow-hidden p-0.5 border border-[#263449]/60">
                     <div
-                      className="bg-gradient-to-r from-[#4F8CFF] to-[#8B5CF6] h-full rounded-full transition-all duration-500 group-hover:from-[#3B82F6] group-hover:to-[#7C3AED]"
+                      className="bg-gradient-to-r from-[#4F8CFF] via-[#8B5CF6] to-[#2DD4BF] h-full rounded-full transition-all duration-500 group-hover:opacity-90"
                       style={{ width: `${percentage}%` }}
                     ></div>
                   </div>
